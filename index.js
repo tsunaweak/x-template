@@ -1,8 +1,8 @@
 const fs = require('fs')
 const Path = require('path');
 
-const mustache = require('./lib/mustache');
-const templateInjector = require('./lib/template-injector');
+const mustache = require('./src/mustache');
+const templateInjector = require('./src/template-injector');
 
 function index(req, res, next){
     process.env.xviews = req.app.get('views') || 'views';

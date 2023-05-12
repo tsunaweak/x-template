@@ -2,9 +2,11 @@ const fs = require("fs");
 const Path = require("path");
 const cheerio = require("cheerio");
 
-var templateInjectorRegex = /<x-((?:.|\r?\n)+?)\/>(?![^<!--].*?-->)/g;
+// var templateInjectorRegex = /<x-((?:.|\r?\n)+?)\/>(?![^<!--].*?-->)/g;
 
-var templateInjectorRegex = /<x-.*?\/>(?![^<!--].*-->)/g;
+const { removeHTMLComments, addHTMLComments }  = require('./comment');
+
+var templateInjectorRegex = /<x-.*?\/>/g;
 var htmlCommentsRegex = /<!--[\s\S]*?-->/g;
 
 
@@ -15,9 +17,14 @@ var htmlCommentsRegex = /<!--[\s\S]*?-->/g;
 var classInjectorRegex = /x-class="([^"]*)"/;
 
 module.exports = (template, data) => {
+  template = removeHTMLComments(template);
   template = template.replace(
     templateInjectorRegex,
     (element) => {
+      if(element.includes('<x-template-comment')) 
+      {
+        return element;
+      }
       if (/^<x-.*\/>$/.test(element)) {
         element = element.slice(3, -2).trim();
         let match = element.match(classInjectorRegex);
@@ -36,5 +43,7 @@ module.exports = (template, data) => {
       }
     }
   );
+  template = addHTMLComments(template);
+  templateInjectorRegex.lastIndex = 0;
   return template;
 };
