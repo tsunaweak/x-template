@@ -17,7 +17,7 @@ var classInjectorRegex = /x-class="([^"]*)"/;
 module.exports = (template, data) => {
   template = template.replace(
     templateInjectorRegex,
-    (element, index, original) => {
+    (element) => {
       if (/^<x-.*\/>$/.test(element)) {
         element = element.slice(3, -2).trim();
         let match = element.match(classInjectorRegex);
