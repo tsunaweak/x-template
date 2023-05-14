@@ -11,12 +11,20 @@ function replaceVariables(condition) {
   return condition;
 }
 
-
-
-module.exports = (template, data) => {
-  let rexp = /<x-if=['|"](.+?)['|"]>((?:(?!<x-(?:else(?:-if)?|if=)).)*)<x-else-if=['|"](.+?)['|"]((?:(?!<x-(?:else(?:-if)?|if=)).)*)|<x-if=['|"](.+?)['|"]((?:(?!<x-(?:else(?:-if)?|if=)).)*)<x-else>((?:(?!<x-(?:else(?:-if)?|if=)).)*)|<x-if=['|"](.+?)['|"]((?:(?!<x-(?:else(?:-if)?|if=)).)*)|<x-else>((?:(?!<x-(?:else(?:-if)?|if=)).)*)<\/x-(?:else(?:-if)?|if=)>/g
-
-
+function replaceTempalteV1(template, data){ //this function does not support nested if-else, else-if statement
+  let str = `
+  <x-if='$true && $one == 1 && $string == "string"'>
+    <x-if='true'>
+      <h1>1</h1>
+    </x-if>
+  <x-else-if="false">
+    <h1>2</h1>
+  <x-else-if='false'>
+    <h1>3</h1>
+  <x-else>
+    <h1>4</h1>
+  </x-if>
+    `
 
 
   template = template.replace(
@@ -52,4 +60,10 @@ module.exports = (template, data) => {
     }
   );
   return template;
+}
+
+
+
+module.exports = (template, data) => {
+  
 };
