@@ -1,6 +1,9 @@
 
+var xelse = '<x-else>';
+var xelseif = '<x-else-if';
+
 function replaceVariables(condition) {
-  if(!(/\$[\w\d]+/g.test(condition))){
+  if (!/\$[\w\d]+/g.test(condition)) {
     return condition;
   }
   let variables = condition.match(/\$[a-zA-Z_][a-zA-Z0-9_]*/g);
@@ -11,7 +14,8 @@ function replaceVariables(condition) {
   return condition;
 }
 
-function replaceTempalteV1(template, data){ //this function does not support nested if-else, else-if statement
+function replaceTempalteV1(template, data) {
+  //this function does not support nested if-else, else-if statement
   let str = `
   <x-if='$true && $one == 1 && $string == "string"'>
     <x-if='true'>
@@ -24,15 +28,14 @@ function replaceTempalteV1(template, data){ //this function does not support nes
   <x-else>
     <h1>4</h1>
   </x-if>
-    `
-
+    `;
 
   template = template.replace(
     /<x-if=['|"](.+?)['|"]>([\s\S]*?)<\/x-if>/g,
     (match, cg1, cg2, offset, string, grps) => {
       let condition = replaceVariables(cg1);
-      let elseIndex = cg2.indexOf("<x-else>");
-      let firstElseIfIndex = cg2.indexOf("<x-else-if");
+      let elseIndex = cg2.lastIndexOf(xelse);
+      let firstElseIfIndex = cg2.lastIndexOf(xelseif);
       if (
         new Function("data", "condition", `return ${condition}`)(
           data,
@@ -46,16 +49,23 @@ function replaceTempalteV1(template, data){ //this function does not support nes
         return cg2.substr(0, ifIndex);
       } else {
         //the regex pattern should be a in variable to prevent the infinite loop in while block
-        const regex = /<x-else-if=["'](.*?)["']>\s*(.*)\s*/g; 
-        while ((match = regex.exec(cg2)) !== null) {  //handles the else-if 
+        const regex = /<x-else-if=["'](.*?)["']>\s*(.*)\s*/g;
+        while ((match = regex.exec(cg2)) !== null) {
+          //handles the else-if
           const elseIfCondition = replaceVariables(match[1]);
           const elseIfContent = match[2];
-          if (new Function("data", "elseIfCondition", `return ${elseIfCondition}`)(data, elseIfCondition ) ) {
+          if (
+            new Function(
+              "data",
+              "elseIfCondition",
+              `return ${elseIfCondition}`
+            )(data, elseIfCondition)
+          ) {
             return elseIfContent;
           }
         }
-        if(elseIndex === -1) return '';
-        return cg2.substr(elseIndex, cg2.length);
+        if (elseIndex === -1) return "";
+        return cg2.substr(elseIndex + xelse.length, cg2.length);
       }
     }
   );
@@ -63,7 +73,6 @@ function replaceTempalteV1(template, data){ //this function does not support nes
 }
 
 
-
 module.exports = (template, data) => {
-  
+  return replaceTempalteV1(template, data);
 };
