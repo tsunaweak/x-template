@@ -1,13 +1,9 @@
-function getVariables(condition) {
-  return condition.match(/\$[a-zA-Z_][a-zA-Z0-9_]*/g);
-}
 
 function replaceVariables(condition) {
   if(!(/\$[\w\d]+/g.test(condition))){
     return condition;
   }
-
-  let variables = getVariables(condition);
+  let variables = condition.match(/\$[a-zA-Z_][a-zA-Z0-9_]*/g);
   for (let variable of variables) {
     let index = variable.slice(1);
     condition = condition.replace(variable, `data['${index}']`);
@@ -15,11 +11,14 @@ function replaceVariables(condition) {
   return condition;
 }
 
-function evaluateCondition(condition, data) {
-  return new Function("data", "with(data) { return " + condition + "; }")(data);
-}
+
 
 module.exports = (template, data) => {
+  let rexp = /<x-if=['|"](.+?)['|"]>((?:(?!<x-(?:else(?:-if)?|if=)).)*)<x-else-if=['|"](.+?)['|"]((?:(?!<x-(?:else(?:-if)?|if=)).)*)|<x-if=['|"](.+?)['|"]((?:(?!<x-(?:else(?:-if)?|if=)).)*)<x-else>((?:(?!<x-(?:else(?:-if)?|if=)).)*)|<x-if=['|"](.+?)['|"]((?:(?!<x-(?:else(?:-if)?|if=)).)*)|<x-else>((?:(?!<x-(?:else(?:-if)?|if=)).)*)<\/x-(?:else(?:-if)?|if=)>/g
+
+
+
+
   template = template.replace(
     /<x-if=['|"](.+?)['|"]>([\s\S]*?)<\/x-if>/g,
     (match, cg1, cg2, offset, string, grps) => {

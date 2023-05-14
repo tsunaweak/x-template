@@ -2,6 +2,7 @@
 
 ## Future Plans
 
+- [x] Mustache Syntax
 - [x] Template Injection
 - [-] Class Injection
 - [-] Handle if-else condition
