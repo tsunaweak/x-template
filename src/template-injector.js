@@ -12,6 +12,11 @@ var templateInjectorRegex = /<x-.*?\/>/g;
 var htmlCommentsRegex = /<!--[\s\S]*?-->/g;
 
 
+var defaultData = {
+  'btn-label': 'Button',
+  'card-label': 'card-label'
+}
+
 
 
 
@@ -41,25 +46,35 @@ module.exports = (template) => {
         }
 
         let dataMatch  = element.match(dataInjectorRegex);
-        let dataList = dataMatch ? dataMatch[1] : "";
+        let dataList = dataMatch  ? dataMatch[1] : "";
+        
         let data = {};
-        if (dataMatch.length > 0) {
+        if (dataList.length > 0) {
           element = element.replace(dataMatch[0], "").trim();
           //it need's the string to be normalize
           // from { label: "Sign up" } to { "label": "Sign up" }
           // the { label: "Sign up" } cannot be parsed as JSON if not normalized
-          const normalizedValue = dataList.replace(/(['"])?([a-zA-Z0-9_]+)(['"])?:/g, '"$2": ');
-          data = JSON.parse(normalizedValue);
-          
+          const normalizedValue = dataList.replace(/(['"])?([a-zA-Z0-9_-]+)(['"])?:/g, '"$2":').replace(/'/g, '\"');
+          Object.assign(data, defaultData, JSON.parse(normalizedValue));
+
+        }else{
+          data = defaultData;
         }
+ 
         let content = fs.readFileSync(
           Path.join(process.env.xviews, `${element.replaceAll("-", "/")}.x`),
           "utf8"
         );
 
-        if(dataMatch.length > 0){
+
+        if(dataList.length > 0){
           content = mustache(content, data);
         }
+       
+
+
+
+
         const $ = cheerio.load(content);
         const classElement = $($("html > body > *")[0]);
         classElement.addClass(classList);
