@@ -7,10 +7,10 @@ const statement = require('./src/statement');
 var template = '';
 
 
-function exTemplate(template, data){
+function main(template, data){
     template = statement(template, data);
-     // template = templateInjector(template);
-            // template = mustache(template, data);
+    template = templateInjector(template);
+    template = mustache(template, data);
     return template;
 }
 
@@ -22,8 +22,7 @@ function index(req, res, next){
         try {
             const filePath = Path.join(process.env.xviews, `${tmpl}.x`);
             template = fs.readFileSync(filePath, 'utf8');
-            template = statement(template, data);
-            template = exTemplate(template);
+            template = main(template);
             res.writeHead(200, { 'Content-Type': 'text/html' });
             res.end(template); 
         } catch (err) {

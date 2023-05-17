@@ -5,6 +5,7 @@
 - [x] Mustache Syntax
 - [x] Template Injection
 - [-] Class Injection
+- [-] Data Injection
 - [-] Handle if-else condition
 - [ ] Handle for loop condition
 - [ ] CLI: to export/parse the templates into a single html file
