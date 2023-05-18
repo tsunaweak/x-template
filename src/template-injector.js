@@ -15,51 +15,81 @@ var defaultData = {
   "card-label": "card-label",
 };
 
+var data = {};
+var classList = "";
+
+function extractClass(element) {
+  let match = element.match(classInjectorRegex);
+  let cList = match ? match[1] : "";
+  if (cList.length > 0) {
+    element = element.replace(match[0], "").trim();
+    classList += cList;
+  }
+  classInjectorRegex.lastIndex = 0;
+  return element;
+}
+
+function readTemplateFile(element, ignoreData = false) {
+  let content = fs.readFileSync(
+    Path.join(process.env.xviews, `${element.replaceAll("-", "/")}.x`),
+    "utf8"
+  );
+  if (templateInjectorRegex.test(content)) {
+    templateInjectorRegex.lastIndex = 0;
+    let dataMatchChild = content.match(dataInjectorRegex);
+    let dataListChild = dataMatchChild ? dataMatchChild[1] : "";
+    if (dataListChild.length > 0) {
+      content = content.replace(dataMatchChild[0], "").trim();
+      const normalizedValue = dataListChild
+        .replace(/(['"])?([a-zA-Z0-9_-]+)(['"])?:/g, '"$2":')
+        .replace(/'/g, '"');
+      if (!ignoreData) {
+        Object.assign(data, defaultData, JSON.parse(`{${normalizedValue}}`));
+      }
+      ignoreData = true;
+    }
+    content = content.slice(3, -2).trim();
+    content = extractClass(content);
+    return readTemplateFile(content, ignoreData);
+  }
+  return content;
+}
+
 //var incompletePatterh = /<x-.*?\/>(?![^<!--].*-->)/g;
 
-var classInjectorRegex = /x-class=['|"](.*)['|"]/;
-var dataInjectorRegex = /x-data=['|"](.*)['|"]/;
+var classInjectorRegex = /x-class=["']([^"']+)["']/;
+var dataInjectorRegex = /x-data=['"]\{([^}]*)\}['"]/;
 
 function main(template) {
-  template = template.replace(templateInjectorRegex, (element) => {
+  template = template.replace(templateInjectorRegex, (e) => {
+    classList = "";
+    data = {};
     templateInjectorRegex.lastIndex = 0;
-    if (element.includes("<x-template-comment")) {
-      return element;
+    if (e.includes("<x-template-comment")) {
+      return e;
     }
-    if (/^<x-.*\/>$/.test(element)) {
-      element = element.slice(3, -2).trim();
-      let classMatch = element.match(classInjectorRegex);
-      let classList = classMatch ? classMatch[1] : "";
-      if (classList.length > 0) {
-        element = element.replace(classMatch[0], "").trim();
-      }
+    if (templateInjectorRegex.test(e)) {
+      templateInjectorRegex.lastIndex = 0;
+      e = e.slice(3, -2).trim();
+
+      element = extractClass(e);
+
 
       let dataMatch = element.match(dataInjectorRegex);
       let dataList = dataMatch ? dataMatch[1] : "";
-
-      let data = {};
+      let ignoreData = false;
       if (dataList.length > 0) {
         element = element.replace(dataMatch[0], "").trim();
+
         //it need's the string to be normalize
         // from { label: "Sign up" } to { "label": "Sign up" }
         // the { label: "Sign up" } cannot be parsed as JSON if not normalized
-        const normalizedValue = dataList
-          .replace(/(['"])?([a-zA-Z0-9_-]+)(['"])?:/g, '"$2":')
-          .replace(/'/g, '"');
-        Object.assign(data, defaultData, JSON.parse(normalizedValue));
-      } else {
-        data = defaultData;
+        const normalizedValue = dataList.replace(/(['"])?([a-zA-Z0-9_-]+)(['"])?:/g, '"$2":').replace(/'/g, '"');
+        Object.assign(data, defaultData, JSON.parse(`{${normalizedValue}}`));
+        ignoreData = true;
       }
+      let content = readTemplateFile(element, ignoreData);
 
-      let content = fs.readFileSync(
-        Path.join(process.env.xviews, `${element.replaceAll("-", "/")}.x`),
-        "utf8"
-      );
-
-      if(templateInjectorRegex.test(content)){
-        templateInjectorRegex.lastIndex = 0;
-        content = main(content);
-      }
 
       content = mustache(content, data);
 
@@ -69,7 +99,7 @@ function main(template) {
       return $("body").html();
     }
   });
-  
+ 
   return template;
 }
 

@@ -8,9 +8,9 @@ var template = '';
 
 
 function main(template, data){
-    template = statement(template, data);
+    //template = statement(template, data);
     template = templateInjector(template);
-    template = mustache(template, data);
+    //template = mustache(template, data);
     return template;
 }
 
