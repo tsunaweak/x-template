@@ -7,8 +7,19 @@ const cheerio = require("cheerio");
 const { removeHTMLComments, addHTMLComments } = require("./comment");
 const mustache = require("./mustache");
 
-var templateInjectorRegex = /<x-.*?\/>/g;
-var htmlCommentsRegex = /<!--[\s\S]*?-->/g;
+var templateInjectorRegex = /<x-.[\s\S]*?(\/>|<\/x)/g;
+
+
+/**
+ * (?:^|[^<x-])[\s\S]*?(?:\/>|<\/x[\s\S]*?)
+ * 
+ */
+//var htmlCommentsRegex = /<!--[\s\S]*?-->/g;
+
+//var incompletePatterh = /<x-.*?\/>(?![^<!--].*-->)/g;
+
+var classInjectorRegex = /x-class=["']([^"']+)["']/;
+var dataInjectorRegex = /x-data=['"]\{([^}]*)\}['"]/;
 
 var defaultData = {
   "btn-label": "Button",
@@ -34,12 +45,15 @@ function readTemplateFile(element, ignoreData = false) {
     Path.join(process.env.xviews, `${element.replaceAll("-", "/")}.x`),
     "utf8"
   );
-  if (templateInjectorRegex.test(content)) {
+
+  content = content.replace(templateInjectorRegex, (e) => {
     templateInjectorRegex.lastIndex = 0;
-    let dataMatchChild = content.match(dataInjectorRegex);
+    e = e.slice(3, -2).trim();
+
+    let dataMatchChild = e.match(dataInjectorRegex);
     let dataListChild = dataMatchChild ? dataMatchChild[1] : "";
     if (dataListChild.length > 0) {
-      content = content.replace(dataMatchChild[0], "").trim();
+      e = e.replace(dataMatchChild[0], "").trim();
       const normalizedValue = dataListChild
         .replace(/(['"])?([a-zA-Z0-9_-]+)(['"])?:/g, '"$2":')
         .replace(/'/g, '"');
@@ -48,19 +62,33 @@ function readTemplateFile(element, ignoreData = false) {
       }
       ignoreData = true;
     }
-    content = content.slice(3, -2).trim();
-    content = extractClass(content);
-    return readTemplateFile(content, ignoreData);
-  }
+
+    if (templateInjectorRegex.test(content)) {
+      templateInjectorRegex.lastIndex = 0;
+      e = extractClass(e);
+
+
+
+
+       e = readTemplateFile(e, ignoreData);
+
+      const $ = cheerio.load(e);
+      const classElement = $($("html > body > *")[0]);
+      classElement.addClass(classList);
+      classList = '';
+      return $("body").html();
+    }
+
+    return e;
+  });
+
+
   return content;
 }
 
-//var incompletePatterh = /<x-.*?\/>(?![^<!--].*-->)/g;
-
-var classInjectorRegex = /x-class=["']([^"']+)["']/;
-var dataInjectorRegex = /x-data=['"]\{([^}]*)\}['"]/;
-
 function main(template) {
+
+
   template = template.replace(templateInjectorRegex, (e) => {
     classList = "";
     data = {};
@@ -74,7 +102,6 @@ function main(template) {
 
       element = extractClass(e);
 
-
       let dataMatch = element.match(dataInjectorRegex);
       let dataList = dataMatch ? dataMatch[1] : "";
       let ignoreData = false;
@@ -84,22 +111,21 @@ function main(template) {
         //it need's the string to be normalize
         // from { label: "Sign up" } to { "label": "Sign up" }
         // the { label: "Sign up" } cannot be parsed as JSON if not normalized
-        const normalizedValue = dataList.replace(/(['"])?([a-zA-Z0-9_-]+)(['"])?:/g, '"$2":').replace(/'/g, '"');
+        const normalizedValue = dataList
+          .replace(/(['"])?([a-zA-Z0-9_-]+)(['"])?:/g, '"$2":')
+          .replace(/'/g, '"');
         Object.assign(data, defaultData, JSON.parse(`{${normalizedValue}}`));
         ignoreData = true;
       }
-      let content = readTemplateFile(element, ignoreData);
 
+      let content = readTemplateFile(element, ignoreData);
 
       content = mustache(content, data);
 
-      const $ = cheerio.load(content);
-      const classElement = $($("html > body > *")[0]);
-      classElement.addClass(classList);
-      return $("body").html();
+      return content;
     }
   });
- 
+
   return template;
 }
 
