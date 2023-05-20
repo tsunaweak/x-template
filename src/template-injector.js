@@ -1,7 +1,7 @@
 const fs = require("fs");
 const Path = require("path");
 const cheerio = require("cheerio");
-const { overrideTailwindClasses } = require('tailwind-override')
+const { overrideTailwindClasses } = require("tailwind-override");
 
 // var templateInjectorRegex = /<x-((?:.|\r?\n)+?)\/>(?![^<!--].*?-->)/g;
 
@@ -24,6 +24,9 @@ var dataInjectorRegex = /x-data=['"]\{([^}]*)\}['"]/;
 var defaultPlaceholder = {
   "btn-label": "Button",
   "card-title": "Card Title",
+  "x-pre": "",
+  "x-intra": "",
+  "x-post": "",
 };
 
 var classList = "";
@@ -36,7 +39,10 @@ function removeAttributes(element) {
   element = element.replace(/x-data=['"]\{([^}]*)\}['"]/, "");
   //remove the x-pre attribute
   element = element.replace(/x-pre=["']([^"']+)["']/, "");
-
+  //remove the x-intra attribute
+  element = element.replace(/x-intra=["']([^"']+)["']/, "");
+  //remove the x-post attribute
+  element = element.replace(/x-post=["']([^"']+)["']/, "");
   return element;
 }
 
@@ -53,19 +59,34 @@ function extractClass(element) {
   }
   return classList;
 }
-function replacePreComponents(content, element) {
-  let match = element.match(/x-pre=["']([^"']+)["']/);
-  let preComponents = match
+function replaceComponent(attribute, content, element) {
+  let regex = new RegExp(`${attribute}=["']([^"']+)["']`);
+
+  let match = element.match(regex);
+
+
+  let components = match
     ? match[1]
         .split("|")
-        .map((components) => {
-          return `<x-${components}/>`;
+        .map((component) => {
+          return `<x-${component}/>`;
         })
         .join("\n")
     : "";
-  if (preComponents.length > 0) {
-    content = mustache(content, { "x-pre": preComponents });
+  if (components.length > 0) {
+    return components;
   }
+  return "";
+}
+
+function replaceComponents(content, element) {
+  if (!( element.includes("x-pre") || element.includes("x-intra") ||  element.includes("x-post"))) return content;
+
+  let components = {};
+  components["x-pre"] = replaceComponent("x-pre", content, element);
+  components["x-intra"] = replaceComponent("x-intra", content, element);
+  components["x-post"] = replaceComponent("x-post", content, element);
+  return mustache(content, components);
   return content;
 }
 
@@ -78,7 +99,7 @@ function extractData(element) {
       .replace(/(['"])?([a-zA-Z0-9_-]+)(['"])?:/g, '"$2":')
       .replace(/'/g, '"');
     if (isObjectEmpty(data)) {
-      data =  { ...defaultPlaceholder, ...JSON.parse(`{${normalizedValue}}`) };
+      data = { ...defaultPlaceholder, ...JSON.parse(`{${normalizedValue}}`) };
     }
     return data;
   }
@@ -103,21 +124,23 @@ function main(template) {
     let element = removeAttributes(original);
     element = element.slice(3, -2).trim();
     let contents = readTemplateFile(element);
-    contents = replacePreComponents(contents, original);
-    let classAttributes = extractClass(original);
+    contents = replaceComponents(contents, original);
 
+    let classAttributes = extractClass(original);
     let dataAttributes = extractData(original);
-    if(!isObjectEmpty(dataAttributes)){
+
+    if (!isObjectEmpty(dataAttributes)) {
       contents = mustache(contents, dataAttributes);
     }
-
 
     contents = main(contents);
 
     const $ = cheerio.load(contents);
     const classElement = $($("html > body > *")[0]);
     classElement.addClass(classAttributes);
-    classElement[0].attribs.class = overrideTailwindClasses(classElement[0].attribs.class);
+    classElement[0].attribs.class = overrideTailwindClasses(
+      classElement[0].attribs.class
+    );
     classList = "";
     data = {};
     return $("body").html();
