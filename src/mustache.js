@@ -42,7 +42,7 @@ module.exports = (template, data) => {
         }
 
         if (data[index] === undefined) {
-            throw `The \`${index}\` does not exist in the provided data`;
+            throw `The \`${index}\` does not exist in the provided data in \n${template}`;
         }
 
         let result = data[index];
